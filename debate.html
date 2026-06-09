@@ -142,7 +142,7 @@ if (token) {
 }
 
 /* Load debate */
-fetch('http://localhost:3000/debates/' + debateId)
+fetch('https://blog-backend-8efx.onrender.com/debates/' + debateId)
 .then(res => res.json())
 .then(data => {
     debateTitle.innerText = data.debate.title;
