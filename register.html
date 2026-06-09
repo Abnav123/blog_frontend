@@ -71,7 +71,7 @@ document.getElementById('registerForm').addEventListener('submit', function(e) {
     const email = regEmail.value;
     const password = regPassword.value;
 
-    fetch('https://blog-backend-8efx.onrender.com/register', {
+    fetch('https://blog-backend-8efx.onrender.com/users/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, email, password })
