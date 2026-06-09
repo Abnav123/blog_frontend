@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DebateHub</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<style>
+body {
+    font-family: 'Poppins', sans-serif;
+    background: linear-gradient(135deg, #eef2ff, #f8fafc);
+}
+
+/* Header */
+.debate-header {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white;
+    border-radius: 15px;
+}
+
+/* Tabs */
+.active-tab {
+    background: #22c55e !important;
+    color: white !important;
+}
+
+/* Argument bubbles */
+.argument-bubble {
+    padding: 12px 16px;
+    border-radius: 15px;
+    margin-bottom: 10px;
+    max-width: 70%;
+    animation: fadeUp 0.4s ease;
+}
+
+/* FOR */
+.for-style {
+    background: #dcfce7;
+    margin-right: auto;
+}
+
+/* AGAINST */
+.against-style {
+    background: #fee2e2;
+    margin-left: auto;
+}
+
+/* Author */
+.arg-author {
+    font-size: 12px;
+    color: gray;
+}
+
+/* Vote */
+.vote-btn {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 18px;
+}
+
+.vote-btn:hover {
+    transform: scale(1.2);
+}
+
+/* Animation */
+@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(15px);}
+    to { opacity: 1; transform: translateY(0);}
+}
+</style>
+</head>
+
+<body>
+
+<div class="container mt-4">
+
+    <!-- Header -->
+    <div class="card debate-header p-4 mb-4 text-center">
+        <h2 id="debateTitle">Loading...</h2>
+        <p id="debateDesc"></p>
+    </div>
+
+    <!-- Add Argument -->
+    <div class="card mb-4 d-none" id="addArgumentSection">
+        <div class="card-body">
+
+            <form id="addArgumentForm">
+                <div class="d-flex gap-2">
+
+                    <select id="argumentSide" class="form-select w-25">
+                        <option value="FOR">👍</option>
+                        <option value="AGAINST">👎</option>
+                    </select>
+
+                    <input type="text" id="argumentContent" 
+                        class="form-control" 
+                        placeholder="Drop your argument..." required>
+
+                    <button class="btn btn-dark">Post</button>
+
+                </div>
+            </form>
+
+            <div id="argMsg" class="text-danger small mt-2"></div>
+        </div>
+    </div>
+
+    <div id="loginPrompt" class="alert alert-info text-center">
+        Please <a href="login.html">login</a> to participate.
+    </div>
+
+    <!-- Tabs -->
+    <div class="d-flex justify-content-center gap-3 mb-4">
+        <button class="btn btn-outline-success active-tab" onclick="showSide('FOR')" id="forTab">
+            👍 FOR
+        </button>
+        <button class="btn btn-outline-danger" onclick="showSide('AGAINST')" id="againstTab">
+            👎 AGAINST
+        </button>
+    </div>
+
+    <!-- Arguments -->
+    <div id="argumentsContainer"></div>
+
+</div>
+
+<script>
+const urlParams = new URLSearchParams(window.location.search);
+const debateId = urlParams.get('id');
+const token = localStorage.getItem('token');
+
+let currentSide = 'FOR';
+
+/* Auth UI */
+if (token) {
+    document.getElementById('addArgumentSection').classList.remove('d-none');
+    document.getElementById('loginPrompt').classList.add('d-none');
+}
+
+/* Load debate */
+fetch('http://localhost:3000/debates/' + debateId)
+.then(res => res.json())
+.then(data => {
+    debateTitle.innerText = data.debate.title;
+    debateDesc.innerText = data.debate.description;
+});
+
+/* Switch side */
+function showSide(side) {
+    currentSide = side;
+
+    forTab.classList.remove('active-tab');
+    againstTab.classList.remove('active-tab');
+
+    if (side === 'FOR') {
+        forTab.classList.add('active-tab');
+    } else {
+        againstTab.classList.add('active-tab');
+    }
+
+    loadArguments();
+}
+
+/* Load arguments */
+function loadArguments() {
+    fetch('http://localhost:3000/arguments/' + debateId)
+    .then(res => res.json())
+    .then(data => {
+
+        const container = document.getElementById('argumentsContainer');
+        container.innerHTML = '';
+
+        data.arguments
+        .filter(arg => arg.side === currentSide)
+        .forEach((arg, index) => {
+
+            const author = arg.author ? arg.author.username : 'Unknown';
+
+            const div = document.createElement('div');
+            div.className = `argument-bubble ${arg.side === 'FOR' ? 'for-style' : 'against-style'}`;
+            div.style.animationDelay = `${index * 0.05}s`;
+
+            div.innerHTML = `
+                <div>${arg.content}</div>
+
+                <div class="d-flex justify-content-between mt-2">
+                    <small class="arg-author">👤 ${author}</small>
+
+                    <div>
+                        <button class="vote-btn">👍</button>
+                        <button class="vote-btn">👎</button>
+                    </div>
+                </div>
+            `;
+
+            container.appendChild(div);
+        });
+    });
+}
+
+/* Add argument */
+if (token) {
+    document.getElementById('addArgumentForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const side = argumentSide.value;
+        const content = argumentContent.value;
+
+        fetch('https://blog-backend-8efx.onrender.com/arguments', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify({ side, content, debateId })
+        })
+        .then(res => res.json().then(data => {
+            if (!res.ok) throw new Error(data.message);
+            return data;
+        }))
+        .then(() => {
+            addArgumentForm.reset();
+            loadArguments();
+        })
+        .catch(err => {
+            argMsg.innerText = err.message;
+        });
+    });
+}
+
+loadArguments();
+</script>
+
+</body>
+</html>
